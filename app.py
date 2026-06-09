@@ -79,10 +79,10 @@ h1, h2, h3 {
 # LOGO
 # =============================
 st.image(
-    "YOUR_LOGO_PATH.png",  # <-- replace with your path
+    "logo.PNG",  # <-- replace with your path
     width=180
 )
-st.title("🛒 Smart Retail AI Dashboard (Prophet + Analytics)")
+st.title("AutoRetail AI Dashboard (Prophet + Analytics)")
 
 # -----------------------------
 # FILE UPLOAD

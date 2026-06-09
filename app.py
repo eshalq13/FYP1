@@ -18,7 +18,70 @@ st.set_page_config(
     page_title="Retail AI Dashboard",
     layout="wide"
 )
+# =============================
+# CUSTOM STYLING
+# =============================
+st.markdown("""
+<style>
 
+/* Main App Background */
+.stApp {
+    background: linear-gradient(
+        135deg,
+        #00BFFF 0%,      /* Electric Blue */
+        #007FFF 30%,
+        #001F3F 65%,
+        #000000 100%     /* Black */
+    );
+    color: white;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: rgba(0, 0, 0, 0.85);
+}
+
+/* Headers */
+h1, h2, h3 {
+    color: white !important;
+}
+
+/* Metric Cards */
+[data-testid="metric-container"] {
+    background-color: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 15px;
+    border-radius: 12px;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab"] {
+    color: white;
+}
+
+/* DataFrames */
+[data-testid="stDataFrame"] {
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 10px;
+}
+
+/* Buttons */
+.stButton > button {
+    background-color: #00BFFF;
+    color: white;
+    border-radius: 10px;
+    border: none;
+}
+
+</style>
+""", unsafe_allow_html=True)
+# =============================
+# LOGO
+# =============================
+st.image(
+    "YOUR_LOGO_PATH.png",  # <-- replace with your path
+    width=180
+)
 st.title("🛒 Smart Retail AI Dashboard (Prophet + Analytics)")
 
 # -----------------------------

@@ -28,10 +28,10 @@ st.markdown("""
 .stApp {
     background: linear-gradient(
         135deg,           
-        #000000 100%,     /* Black */
-        #001F3F 65%,
-        #007FFF 30%,
-        #00BFFF 0%        /* Electric Blue */
+        #000000 0%,     /* Black */
+        #001F3F 30%,
+        #007FFF 65%,
+        #00BFFF 100%        /* Electric Blue */
     );
     color: white;
 }

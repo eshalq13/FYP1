@@ -137,32 +137,84 @@ if uploaded_file:
     # TAB 2 - FORECAST
     # =============================
     with tab2:
-
+    
         st.subheader("AI Forecasting (Prophet)")
-
+    
         daily = get_daily_sales(df)
-
+    
         model, forecast = run_prophet(daily, forecast_days)
-
+    
+        # 30-Day Moving Average
+        daily['MA30'] = daily['y'].rolling(30).mean()
+    
         fig = go.Figure()
-
-        fig.add_trace(go.Scatter(x=daily['ds'], y=daily['y'], name="Actual"))
-        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name="Forecast"))
-
+    
+        # Actual Sales
+        fig.add_trace(go.Scatter(
+            x=daily['ds'],
+            y=daily['y'],
+            mode='lines',
+            name='Actual Sales',
+            line=dict(color='cyan', width=2)
+        ))
+    
+        # Moving Average
+        fig.add_trace(go.Scatter(
+            x=daily['ds'],
+            y=daily['MA30'],
+            mode='lines',
+            name='30-Day Moving Average',
+            line=dict(color='lime', width=2)
+        ))
+    
+        # Forecast
+        fig.add_trace(go.Scatter(
+            x=forecast['ds'],
+            y=forecast['yhat'],
+            mode='lines',
+            name='Forecast',
+            line=dict(color='orange', width=3)
+        ))
+    
+        # Upper Bound
         fig.add_trace(go.Scatter(
             x=forecast['ds'],
             y=forecast['yhat_upper'],
-            line=dict(dash='dot'),
-            name="Upper Bound"
+            mode='lines',
+            line=dict(width=0),
+            showlegend=False
         ))
-
+    
+        # Lower Bound + Shaded Confidence Area
         fig.add_trace(go.Scatter(
             x=forecast['ds'],
             y=forecast['yhat_lower'],
-            line=dict(dash='dot'),
-            name="Lower Bound"
+            mode='lines',
+            fill='tonexty',
+            fillcolor='rgba(255,165,0,0.2)',
+            line=dict(width=0),
+            name='Confidence Interval'
         ))
-
+    
+        # Forecast Start Marker
+        forecast_start = daily['ds'].max()
+    
+        fig.add_vline(
+            x=forecast_start,
+            line_dash="dash",
+            line_color="red",
+            annotation_text="Forecast Starts"
+        )
+    
+        fig.update_layout(
+            title="Sales Forecast Analysis",
+            xaxis_title="Date",
+            yaxis_title="Revenue",
+            hovermode="x unified",
+            template="plotly_dark",
+            height=650
+        )
+    
         st.plotly_chart(fig, use_container_width=True)
 
     # =============================

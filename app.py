@@ -105,13 +105,14 @@ if uploaded_file:
     # -----------------------------
     # TABS
     # -----------------------------
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Overview",
         "📈 Forecasting",
         "📦 Product Analysis",
         "⚠️ Inventory",
         "🧠 Recommendations",
-        "📄 Reports"
+        "📄 Reports",
+        "📖 Insights & Explanation"
     ])
 
     # =============================
@@ -237,6 +238,113 @@ if uploaded_file:
         recommendations=rec,
         dead_stock_df=dead
     )
+
+    # =============================
+    # TAB 7 - INSIGHTS & EXPLANATION
+    # =============================
+    with tab7:
+
+        st.subheader("Dashboard Results Explained")
+
+        st.markdown("""
+        ## 📊 Sales Overview
+
+        - **Total Revenue** shows the total sales generated from all transactions.
+        - **Total Transactions** indicates how many purchases were made.
+        - **Unique Products** represents the diversity of products sold.
+        - The **Daily Revenue Trend** chart helps identify seasonality, growth, and sales fluctuations.
+
+        ---
+
+        ## 📈 Forecasting
+
+        The forecasting model uses **Facebook Prophet** to predict future revenue.
+
+        - **Actual Line** = Historical sales data.
+        - **Forecast Line** = Predicted future sales.
+        - **Upper Bound** = Optimistic scenario.
+        - **Lower Bound** = Conservative scenario.
+
+        ### How to use it:
+        - Plan inventory levels.
+        - Anticipate demand spikes.
+        - Support budgeting and staffing decisions.
+
+        ---
+
+        ## 📦 Product Analysis
+
+        This section identifies your best-performing products.
+
+        - Products at the top generate the highest sales.
+        - These items should receive:
+            - More inventory allocation
+            - Promotional focus
+            - Strategic placement
+
+        ---
+
+        ## ⚠️ Inventory Analysis
+
+        ### Dead Stock Detection
+        Products appearing here have little or no recent sales activity.
+
+        Potential actions:
+        - Discount or bundle products.
+        - Reduce future purchasing.
+        - Remove obsolete inventory.
+
+        ### Profit Analysis
+        Shows products generating the highest profits.
+
+        Focus on:
+        - Increasing stock levels.
+        - Cross-selling opportunities.
+        - Marketing campaigns.
+
+        ---
+
+        ## 🧠 AI Recommendations
+
+        The recommendation engine identifies:
+
+        🔥 High Demand Products
+        - Fast-moving items.
+        - Candidates for increased inventory.
+
+        ⚠️ Low Demand Products
+        - Slow-moving items.
+        - Candidates for promotions or discontinuation.
+
+        ---
+
+        ## 📄 Executive Summary
+
+        The generated report summarizes:
+
+        - Revenue performance
+        - Forecast outlook
+        - Inventory risks
+        - Product opportunities
+        - AI-generated recommendations
+
+        This report can be shared directly with management and stakeholders.
+        """)
+
+        # Optional dynamic insights
+        st.subheader("Quick Business Interpretation")
+
+        revenue = round(df['Revenue'].sum(), 2)
+
+        st.success(
+            f"""
+            Revenue analyzed: {revenue}
+
+            Use the forecasting tab to determine whether future demand
+            is increasing or decreasing. Review dead stock items regularly
+            to improve inventory turnover and profitability.
+            """
+        )
 
         st.subheader("Download Reports")
 

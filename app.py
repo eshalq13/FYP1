@@ -246,11 +246,11 @@ if uploaded_file:
             file_name="summary.txt"
         )
 
-        # st.download_button(
-        #     "📥 PDF Report",
-        #     pdf_bytes,
-        #     file_name="report.pdf"
-        # )
+        st.download_button(
+            "📥 PDF Report",
+            pdf_bytes,
+            file_name="report.pdf"
+        )
 
         # st.download_button(
         #     "📊 Excel Report",

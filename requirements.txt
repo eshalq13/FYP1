@@ -3,3 +3,4 @@ plotly
 pandas
 prophet
 numpy
+reportlab

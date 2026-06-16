@@ -3,6 +3,20 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Image,
+    PageBreak
+)
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+
+from io import BytesIO
+import tempfile
+import os
+
 from utils import (
     clean_data,
     get_daily_sales,
@@ -13,6 +27,75 @@ from utils import (
     recommendations,
     generate_executive_summary
 )
+
+def generate_pdf_report(
+    summary_text,
+    overview_fig,
+    forecast_fig,
+    product_fig,
+    profit_fig
+):
+    pdf_buffer = BytesIO()
+
+    doc = SimpleDocTemplate(pdf_buffer)
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    title = Paragraph(
+        "AutoRetail AI Executive Report",
+        styles["Title"]
+    )
+
+    elements.append(title)
+    elements.append(Spacer(1, 12))
+
+    # Executive Summary
+    elements.append(
+        Paragraph("Executive Summary", styles["Heading1"])
+    )
+
+    elements.append(
+        Paragraph(summary_text.replace("\n", "<br/>"),
+                  styles["BodyText"])
+    )
+
+    elements.append(PageBreak())
+
+    chart_data = [
+        ("Sales Trend", overview_fig),
+        ("Forecast Analysis", forecast_fig),
+        ("Top Products", product_fig),
+        ("Profit Analysis", profit_fig)
+    ]
+
+    for chart_title, fig in chart_data:
+
+        elements.append(
+            Paragraph(chart_title, styles["Heading2"])
+        )
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".png",
+            delete=False
+        ) as tmpfile:
+
+            fig.write_image(tmpfile.name, width=1200, height=700)
+
+            elements.append(
+                Image(tmpfile.name,
+                      width=500,
+                      height=300)
+            )
+
+        elements.append(Spacer(1, 20))
+
+    doc.build(elements)
+
+    pdf_buffer.seek(0)
+
+    return pdf_buffer
 
 st.set_page_config(
     page_title="Retail AI Dashboard",
@@ -123,9 +206,14 @@ if uploaded_file:
 
         daily = get_daily_sales(df)
 
-        fig = px.line(daily, x='ds', y='y', title="Daily Revenue Trend")
+        overview_fig = px.line(
+            daily,
+            x='ds',
+            y='y',
+            title="Daily Revenue Trend"
+        )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(overview_fig, use_container_width=True)
 
         col1, col2, col3 = st.columns(3)
 
@@ -144,26 +232,26 @@ if uploaded_file:
 
         model, forecast = run_prophet(daily, forecast_days)
 
-        fig = go.Figure()
+        forecast_fig = go.Figure()
 
-        fig.add_trace(go.Scatter(x=daily['ds'], y=daily['y'], name="Actual"))
-        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name="Forecast"))
+        forecast_fig.add_trace(go.Scatter(x=daily['ds'], y=daily['y'], name="Actual"))
+        forecast_fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name="Forecast"))
 
-        fig.add_trace(go.Scatter(
+        forecast_fig.add_trace(go.Scatter(
             x=forecast['ds'],
             y=forecast['yhat_upper'],
             line=dict(dash='dot'),
             name="Upper Bound"
         ))
 
-        fig.add_trace(go.Scatter(
+        forecast_fig.add_trace(go.Scatter(
             x=forecast['ds'],
             y=forecast['yhat_lower'],
             line=dict(dash='dot'),
             name="Lower Bound"
         ))
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(forecast_fig, use_container_width=True)
 
     # =============================
     # TAB 3 - PRODUCT ANALYSIS
@@ -174,14 +262,14 @@ if uploaded_file:
 
         prod = product_analysis(df).head(20)
 
-        fig = px.bar(
+        product_fig = px.bar(
             x=prod.values,
             y=prod.index,
             orientation='h',
             title="Top Products"
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(product_fig, use_container_width=True)
 
         st.write("Top Products Table")
         st.dataframe(prod)
@@ -203,14 +291,14 @@ if uploaded_file:
 
         profit = profit_analysis(df).head(20)
 
-        fig = px.bar(
+        profit_fig = px.bar(
             x=profit.values,
             y=profit.index,
             orientation='h',
             title="Top Profitable Products"
         )
 
-        st.plotly_chart(fig)
+        st.plotly_chart(profit_fig)
 
     # =============================
     # TAB 5 - RECOMMENDATIONS
@@ -230,33 +318,39 @@ if uploaded_file:
         st.info("Recommendations are rule-based AI logic + Prophet forecasting insights")
 
     with tab6:
-
+    
         summary_text = generate_executive_summary(
-        df=df,
-        forecast=forecast,
-        recommendations=rec,
-        dead_stock_df=dead
-    )
-
+            df=df,
+            forecast=forecast,
+            recommendations=rec,
+            dead_stock_df=dead
+        )
+        
         st.subheader("Download Reports")
-
+        
+        # TXT
         st.download_button(
-            "📄 Summary Report",
+            "📄 Summary Report (TXT)",
             data=summary_text,
-            file_name="summary.txt"
+            file_name="summary.txt",
+            mime="text/plain"
         )
-
+        
+        # PDF
+        pdf_file = generate_pdf_report(
+            summary_text,
+            overview_fig,
+            forecast_fig,
+            product_fig,
+            profit_fig
+        )
+        
         st.download_button(
-            "📥 PDF Report",
-            pdf_bytes,
-            file_name="report.pdf"
+            "📊 Executive Report (PDF)",
+            data=pdf_file,
+            file_name="executive_report.pdf",
+            mime="application/pdf"
         )
-
-        # st.download_button(
-        #     "📊 Excel Report",
-        #     excel_file,
-        #     file_name="report.xlsx"
-        # )
-
-else:
-    st.info("Upload a CSV file to start analysis")
+        
+        else:
+        st.info("Upload a CSV file to start analysis")

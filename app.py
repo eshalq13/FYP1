@@ -353,4 +353,4 @@ if uploaded_file:
         )
         
         else:
-        st.info("Upload a CSV file to start analysis")
+            st.info("Upload a CSV file to start analysis")

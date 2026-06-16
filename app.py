@@ -352,5 +352,5 @@ if uploaded_file:
             mime="application/pdf"
         )
         
-    else:
-        st.info("Upload a CSV file to start analysis")
+else:
+    st.info("Upload a CSV file to start analysis")

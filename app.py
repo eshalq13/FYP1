@@ -1,262 +1,85 @@
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import sqlite3
+import os
 
-from utils import (
-    clean_data,
-    get_daily_sales,
-    run_prophet,
-    product_analysis,
-    dead_stock,
-    profit_analysis,
-    recommendations,
-    generate_executive_summary
-)
-
-st.set_page_config(
-    page_title="Retail AI Dashboard",
-    layout="wide"
-)
-# =============================
-# CUSTOM STYLING
-# =============================
-st.markdown("""
-<style>
-
-/* Main App Background */
-.stApp {
-    background: linear-gradient(
-        135deg,           
-        #000000 0%,     /* Black */
-        #001F3F 30%,
-        #007FFF 65%,
-        #00BFFF 100%        /* Electric Blue */
-    );
-    color: white;
-}
-
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background-color: rgba(0, 0, 0, 0.85);
-}
-
-/* Headers */
-h1, h2, h3 {
-    color: white !important;
-}
-
-/* Metric Cards */
-[data-testid="metric-container"] {
-    background-color: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    padding: 15px;
-    border-radius: 12px;
-}
-
-/* Tabs */
-.stTabs [data-baseweb="tab"] {
-    color: white;
-}
-
-/* DataFrames */
-[data-testid="stDataFrame"] {
-    background-color: rgba(255,255,255,0.05);
-    border-radius: 10px;
-}
-
-/* Buttons */
-.stButton > button {
-    background-color: #00BFFF;
-    color: white;
-    border-radius: 10px;
-    border: none;
-}
-
-</style>
-""", unsafe_allow_html=True)
-# =============================
-# LOGO
-# =============================
-st.image(
-    "logo.PNG",
-    width=180
-)
-st.title("AutoRetail AI Dashboard")
-
-# -----------------------------
-# FILE UPLOAD
-# -----------------------------
-uploaded_file = st.file_uploader("Upload your Retail CSV", type=["csv"])
-
-if uploaded_file:
-
-    df = pd.read_csv(uploaded_file)
-
-    df = clean_data(df)
-
-    st.success("Data Loaded Successfully!")
-
-    # SIDEBAR CONTROLS
-    st.sidebar.header("Controls")
-
-    forecast_days = st.sidebar.slider("Forecast Days", 30, 365, 90)
-
-    # -----------------------------
-    # TABS
-    # -----------------------------
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "📊 Overview",
-        "📈 Forecasting",
-        "📦 Product Analysis",
-        "⚠️ Inventory",
-        "🧠 Recommendations",
-        "📄 Reports"
-    ])
-
-    # =============================
-    # TAB 1 - OVERVIEW
-    # =============================
-    with tab1:
-
-        st.subheader("Sales Overview")
-
-        daily = get_daily_sales(df)
-
-        fig = px.line(daily, x='ds', y='y', title="Daily Revenue Trend")
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric("Total Revenue", round(df['Revenue'].sum(), 2))
-        col2.metric("Total Transactions", len(df))
-        col3.metric("Unique Products", df['Description'].nunique())
-
-    # =============================
-    # TAB 2 - FORECAST
-    # =============================
-    with tab2:
-
-        st.subheader("AI Forecasting (Prophet)")
-
-        daily = get_daily_sales(df)
-
-        model, forecast = run_prophet(daily, forecast_days)
-
-        fig = go.Figure()
-
-        fig.add_trace(go.Scatter(x=daily['ds'], y=daily['y'], name="Actual"))
-        fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name="Forecast"))
-
-        fig.add_trace(go.Scatter(
-            x=forecast['ds'],
-            y=forecast['yhat_upper'],
-            line=dict(dash='dot'),
-            name="Upper Bound"
-        ))
-
-        fig.add_trace(go.Scatter(
-            x=forecast['ds'],
-            y=forecast['yhat_lower'],
-            line=dict(dash='dot'),
-            name="Lower Bound"
-        ))
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    # =============================
-    # TAB 3 - PRODUCT ANALYSIS
-    # =============================
-    with tab3:
-
-        st.subheader("Product Performance")
-
-        prod = product_analysis(df).head(20)
-
-        fig = px.bar(
-            x=prod.values,
-            y=prod.index,
-            orientation='h',
-            title="Top Products"
+# ======================
+# Database setup
+# ======================
+def init_db():
+    conn = sqlite3.connect("shop.db")
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            price REAL,
+            image TEXT
         )
+    ''')
+    # Insert demo products only once
+    c.execute("SELECT COUNT(*) FROM products")
+    if c.fetchone()[0] == 0:
+        products = [
+            ("Headphones", 1200, "pictures/headphones.png"),
+            ("Keyboard", 900, "pictures/keyboard.png"),
+            ("Monitor", 3500, "pictures/monitor.png"),
+            ("Mouse", 600, "pictures/mouse.png"),
+        ]
+        c.executemany("INSERT INTO products (name, price, image) VALUES (?, ?, ?)", products)
+    conn.commit()
+    conn.close()
 
-        st.plotly_chart(fig, use_container_width=True)
+def get_products():
+    conn = sqlite3.connect("shop.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM products")
+    rows = c.fetchall()
+    conn.close()
+    return rows
 
-        st.write("Top Products Table")
-        st.dataframe(prod)
+# ======================
+# Streamlit App
+# ======================
+st.set_page_config(page_title="Virtual Store Demo", layout="wide")
+st.title("🛍️ Virtual Store App")
 
-    # =============================
-    # TAB 4 - INVENTORY
-    # =============================
-    with tab4:
+# Initialize database
+init_db()
 
-        st.subheader("Dead Stock Detection")
+# Shopping cart session state
+if "cart" not in st.session_state:
+    st.session_state["cart"] = []
 
-        dead = dead_stock(df)
+menu = st.sidebar.radio("Menu", ["Products", "My Cart"])
 
-        st.dataframe(dead)
+if menu == "Products":
+    products = get_products()
+    cols = st.columns(2)
+    for idx, product in enumerate(products):
+        with cols[idx % 2]:
+            # Show product image (if file exists)
+            if os.path.exists(product[3]):
+                st.image(product[3], width=150)
+            else:
+                st.warning("Image not found!")
 
-        st.metric("Dead Stock Items", len(dead))
+            st.write(f"**{product[1]}**")
+            st.write(f"💵 {product[2]} USD")
+            if st.button("Add to Cart", key=f"add_{product[0]}"):
+                st.session_state["cart"].append(product)
+                st.success(f"{product[1]} added to cart!")
 
-        st.subheader("Profit Analysis")
-
-        profit = profit_analysis(df).head(20)
-
-        fig = px.bar(
-            x=profit.values,
-            y=profit.index,
-            orientation='h',
-            title="Top Profitable Products"
-        )
-
-        st.plotly_chart(fig)
-
-    # =============================
-    # TAB 5 - RECOMMENDATIONS
-    # =============================
-    with tab5:
-
-        st.subheader("AI Recommendations Engine")
-
-        rec = recommendations(df)
-
-        st.write("🔥 High Demand Products")
-        st.write(rec['high_demand'])
-
-        st.write("⚠️ Low Demand Products")
-        st.write(rec['low_demand'])
-
-        st.info("Recommendations are rule-based AI logic + Prophet forecasting insights")
-
-    with tab6:
-
-        summary_text = generate_executive_summary(
-        df=df,
-        forecast=forecast,
-        recommendations=rec,
-        dead_stock_df=dead
-    )
-
-        st.subheader("Download Reports")
-
-        st.download_button(
-            "📄 Summary Report",
-            data=summary_text,
-            file_name="summary.txt"
-        )
-
-        # st.download_button(
-        #     "📥 PDF Report",
-        #     pdf_bytes,
-        #     file_name="report.pdf"
-        # )
-
-        # st.download_button(
-        #     "📊 Excel Report",
-        #     excel_file,
-        #     file_name="report.xlsx"
-        # )
-
-else:
-    st.info("Upload a CSV file to start analysis")
+elif menu == "My Cart":
+    st.header("🛒 Your Shopping Cart")
+    cart = st.session_state["cart"]
+    if not cart:
+        st.info("Your cart is empty.")
+    else:
+        total = 0
+        for item in cart:
+            st.write(f"- {item[1]} — {item[2]} USD")
+            total += item[2]
+        st.subheader(f"Total: {total} USD")
+        if st.button("Clear Cart"):
+            st.session_state["cart"] = []
+            st.success("Cart cleared!")
